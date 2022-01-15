@@ -20,7 +20,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-class SolaredgeModbusHub:
+class SolarEdgeModbusHub:
     """Thread safe wrapper class for pymodbus."""
 
     def __init__(
@@ -50,6 +50,24 @@ class SolaredgeModbusHub:
         self._unsub_interval_method = None
         self._sensors = []
         self.data = {}
+        
+        self.se_inverters = []
+        self.se_meters = []
+
+    async def _async_init_solaredge(self) -> None:
+        
+        for inverter_index in range(self.number_of_inverters):
+            inverter_unit_id = inverter_index + self.device_id
+            self.se_inverters.append(SolarEdgeInverter(inverter_unit_id, self))
+        
+        if self.read_meter1 == True:
+            self.se_meters.append(SolarEdgeMeter(self.device_id, 1, self))
+
+        if self.read_meter2 == True:
+            self.se_meters.append(SolarEdgeMeter(self.device_id, 2, self))
+
+        if self.read_meter3 == True:
+            self.se_meters.append(SolarEdgeMeter(self.device_id, 3, self))
 
     @callback
     def async_add_solaredge_sensor(self, update_callback):
@@ -1022,3 +1040,33 @@ class SolaredgeModbusHub:
             return False
 
         return True
+
+class SolarEdgeInverter:
+    def __init__(self, device_id: int, hub: SolarEdgeModbusHub) -> None:
+
+        self._device_info = {
+            "identifiers": {(DOMAIN, self.hub.name)},
+            "name": f"{hub.name.capitalize()} Inverter {device_id}",
+            "manufacturer": ATTR_MANUFACTURER,
+            #"model": self.model,
+            #"sw_version": self.firmware_version,
+        }
+
+    @property
+    def device_info(self) -> Optional[Dict[str, Any]]:
+        return self._device_info        
+
+class SolarEdgeMeter:
+    def __init__(self, device_id: int, meter_id: int, hub: SolarEdgeModbusHub) -> None:
+
+        self._device_info = {
+            "identifiers": {(DOMAIN, self.hub.name)},
+            "name": f"{hub.name.capitalize()} Meter {meter_id}",
+            "manufacturer": ATTR_MANUFACTURER,
+            #"model": self.model,
+            #"sw_version": self.firmware_version,
+        }
+
+    @property
+    def device_info(self) -> Optional[Dict[str, Any]]:
+        return self._device_info        
